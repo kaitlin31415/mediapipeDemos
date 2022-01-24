@@ -43,3 +43,18 @@ python pose.py -i /path/to/some/file/i-am-a-video-file.mp4
 ## Numpy
 
 See example `python pose.py` for how to extract numpy array from the mediapipe landmark objects.
+
+## Running Tests for New Iris Tracking Intake
+1. set the name of the persisting file you want to use on line 175 of iris.py
+```
+       with open('csvs/testdeltas.csv', mode='a', newline='') as f:
+```
+2. run `python iris.py`
+
+
+## Running Tests for New Iris Tracking
+1. set the name of the model you want to use on line 72 of iris tester
+```
+       with open('iris_model_16_2_5_gb_kfolds.pkl', 'rb') as f:
+```
+2. run `python iris_tester.py`
