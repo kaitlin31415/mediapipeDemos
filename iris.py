@@ -3,13 +3,15 @@ import argparse
 import cv2
 import mediapipe as mp
 import numpy as np
+import csv
+
 
 from custom.iris_lm_depth import from_landmarks_to_depth
 from videosource import FileSource, WebcamSource
 
 mp_face_mesh = mp.solutions.face_mesh
 
-points_idx = [33, 133, 362, 263, 61, 291, 199]
+points_idx = [33, 133, 362, 263]
 points_idx = list(set(points_idx))
 points_idx.sort()
 
@@ -26,7 +28,27 @@ SMALL_CIRCLE_SIZE = 1
 LARGE_CIRCLE_SIZE = 2
 
 
+LEFT_EYE_LANDMARKS_ID = np.array([33, 133])
+RIGHT_EYE_LANDMARKS_ID = np.array([362, 263])
+
+POINTS_IDX = [33, 133, 362, 263]
+POINTS_IDX = list(set(POINTS_IDX))
+POINTS_IDX.sort()
+
+def __add_landmark_to_df(landmark, landmark_idx, df_headers, df_values):
+    """Helper function that adds a landmark to the dataframe"""
+
+    df_headers.append("x{}".format(landmark_idx))
+    df_headers.append("y{}".format(landmark_idx))
+    df_headers.append("z{}".format(landmark_idx))
+
+    df_values.append(landmark[0])
+    df_values.append(landmark[1])
+    df_values.append(landmark[2])
+
+
 def main(inp):
+    FIRST_TIME=True
     if inp is None:
         frame_height, frame_width = (720, 1280)
         source = WebcamSource(width=frame_width, height=frame_height)
@@ -109,6 +131,53 @@ def main(inp):
                 print(f"size: {left_iris_size:.2f}, {right_iris_size:.2f}")
 
             if landmarks is not None:
+                
+                landmark_idx = 0
+                df_headers = []
+                df_values = []
+                
+                # add eye contours to dataframe
+                eye_landmarks = np.concatenate(
+                    [
+                        right_eye_contours[0:17],
+                        left_eye_contours[0:17],
+                    ]
+                )
+
+                # add iris landmarks to dataframe
+                iris_landmarks = np.concatenate(
+                    [
+                        right_iris_landmarks,
+                        left_iris_landmarks,
+                    ]
+                )
+                for landmark in iris_landmarks:
+
+                    __add_landmark_to_df(landmark, landmark_idx, df_headers, df_values)
+
+                    landmark_idx += 1
+
+                for landmark in eye_landmarks:
+
+                    __add_landmark_to_df(landmark, landmark_idx, df_headers, df_values)
+
+                    landmark_idx += 1
+
+                # add subset of facemesh to dataframe
+                for ii in POINTS_IDX:
+
+                    landmark = (landmarks[0, ii], landmarks[1, ii], landmarks[2, ii])
+                    __add_landmark_to_df(landmark, landmark_idx, df_headers, df_values)
+
+                    landmark_idx += 1
+
+                 # Export to CSV
+                with open('csvs/testdeltas.csv', mode='a', newline='') as f:
+                    csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    if (FIRST_TIME):
+                        csv_writer.writerow(df_headers)
+                        FIRST_TIME = False
+                    csv_writer.writerow(df_values) 
 
                 # draw subset of facemesh
                 for ii in points_idx:
@@ -118,8 +187,8 @@ def main(inp):
                 # draw eye contours
                 eye_landmarks = np.concatenate(
                     [
-                        right_eye_contours,
-                        left_eye_contours,
+                        right_eye_contours[0:17],
+                        left_eye_contours[0:17],
                     ]
                 )
                 for landmark in eye_landmarks:
@@ -129,8 +198,8 @@ def main(inp):
                 # draw iris landmarks
                 iris_landmarks = np.concatenate(
                     [
-                        right_iris_landmarks,
-                        left_iris_landmarks,
+                        right_iris_landmarks[0:3],
+                        left_iris_landmarks[0:5],
                     ]
                 )
                 for landmark in iris_landmarks:
